@@ -1,0 +1,27 @@
+{
+  "name": "OpenEVSE",
+  "keywords": "config,eeprom,json",
+  "description": "Provide a nice C++ API to the OpenEVSE module via RAPI",
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/jeremypoulter/OpenEVSE_Lib.git"
+  },
+  "authors":
+  [
+    {
+      "name": "Jeremy Poulter",
+      "email": "jeremy@bigjungle.net",
+      "maintainer": true
+    }
+  ],
+  "version": "0.0.1",
+  "frameworks": "arduino",
+  "platforms": "*",
+  "dependencies": [
+    {
+      "name": "Micro Debug",
+      "version": "~0.0.3"
+    }
+  ]
+}
