@@ -186,6 +186,89 @@ void OpenEVSEClass::setTime(tm &time, std::function<void(int ret)> callback)
 
 }
 
+void OpenEVSEClass::getChargeCurrentAndVoltage(std::function<void(int ret, double amps, double volts)> callback)
+{
+  // GG - get charging current and voltage
+  //  response: $OK milliamps millivolts
+  //  AMMETER must be defined in order to get amps, otherwise returns -1 amps
+  //  $GG^24
+
+  _sender->sendCmd("$GG", [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 3)
+      {
+        long milliAmps = strtol(_sender->getToken(1), NULL, 10);
+        long milliVolts = strtol(_sender->getToken(2), NULL, 10);
+
+        callback(ret, (double)milliAmps / 1000.0, (double)milliVolts / 1000.0);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0, 0);
+      }
+    } else {
+      callback(ret, 0, 0);
+    }
+  });
+}
+
+void OpenEVSEClass::getTemperature(std::function<void(int ret, double temp1, bool temp1_valid, double temp2, bool temp2_valid, double temp3, bool temp3_valid)> callback)
+{
+  // GP - get temPerature (v1.0.3+)
+  //  response: $OK ds3231temp mcp9808temp tmp007temp
+  //  ds3231temp - temperature from DS3231 RTC
+  //  mcp9808temp - temperature from MCP9808
+  //  tmp007temp - temperature from TMP007
+  //  all temperatures are in 10th's of a degree Celcius
+  //  if any temperature sensor is not installed, its return value is -2560
+  //  $GP^33
+
+  _sender->sendCmd("$GP", [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 4)
+      {
+        long temp1 = strtol(_sender->getToken(1), NULL, 10);
+        long temp2 = strtol(_sender->getToken(2), NULL, 10);
+        long temp3 = strtol(_sender->getToken(3), NULL, 10);
+
+        callback(ret, (double)temp1 / 10.0, -2560 != temp1, (double)temp2 / 10.0, -2560 != temp2, (double)temp3 / 10.0, -2560 != temp3);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0, false, 0, false, 0, false);
+      }
+    } else {
+      callback(ret, 0, false, 0, false, 0, false);
+    }
+  });
+}
+
+void OpenEVSEClass::setVoltage(uint32_t milliVolts, std::function<void(int ret)> callback)
+{
+  char command[64];
+  snprintf(command, sizeof(command), "$SV %u", milliVolts);
+
+  _sender->sendCmd(command, [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 1)
+      {
+        callback(RAPI_RESPONSE_OK);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE);
+      }
+    } else {
+      callback(ret);
+    }
+  });
+}
+
+void OpenEVSEClass::setVoltage(double volts, std::function<void(int ret)> callback)
+{
+  setVoltage((uint32_t)round(volts * 1000), callback);
+}
+
 void OpenEVSEClass::onEvent()
 {
   DBUGF("Got ASYNC event %s", _sender->getToken(0));
