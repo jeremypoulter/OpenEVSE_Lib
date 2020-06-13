@@ -7,6 +7,9 @@
 
 #include "openevse.h"
 
+#include <time.h>                       // time() ctime()
+#include <sys/time.h>                   // struct timeval
+
 OpenEVSEClass::OpenEVSEClass() :
   _sender(NULL),
   _connected(false),
