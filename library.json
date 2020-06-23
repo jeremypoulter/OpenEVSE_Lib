@@ -1,6 +1,6 @@
 {
   "name": "OpenEVSE",
-  "keywords": "config,eeprom,json",
+  "keywords": "openevse,rapi",
   "description": "Provide a nice C++ API to the OpenEVSE module via RAPI",
   "repository":
   {
@@ -15,7 +15,7 @@
       "maintainer": true
     }
   ],
-  "version": "0.0.2",
+  "version": "0.0.3",
   "frameworks": "arduino",
   "platforms": "*",
   "dependencies": [
