@@ -116,5 +116,13 @@ public:
   }
 
   void loop();
+  bool hasPendingCommands() {
+    return !_commandQueue.empty();
+  }
+  void flush() {
+    while(hasPendingCommands()) {
+      loop();
+    }
+  }
 };
 
