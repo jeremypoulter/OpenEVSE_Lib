@@ -11,7 +11,7 @@
 
 #define RAPI_TIMEOUT_MS 500
 #define RAPI_READ_TIMEOUT_MS 20
-#define RAPI_BUFLEN 40
+#define RAPI_BUFLEN 100
 #define RAPI_MAX_TOKENS 10
 
 #define ESRAPI_SOC '$' // start of command
