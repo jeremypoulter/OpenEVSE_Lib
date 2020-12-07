@@ -45,8 +45,9 @@ void OpenEVSEClass::begin(RapiSender &sender, std::function<void(bool connected)
 
 void OpenEVSEClass::getVersion(std::function<void(int ret, const char *firmware, const char *protocol)> callback)
 {
-  if (!_sender)
+  if (!_sender) {
     return;
+  }
 
   // Check OpenEVSE version is in.
   _sender->sendCmd("$GV", [this, callback](int ret)
@@ -70,8 +71,9 @@ void OpenEVSEClass::getVersion(std::function<void(int ret, const char *firmware,
 
 void OpenEVSEClass::getStatus(std::function<void(int ret, uint8_t evse_state, uint32_t session_time, uint8_t pilot_state, uint32_t vflags)> callback)
 {
-  if (!_sender)
+  if (!_sender) {
     return;
+  }
 
   // Check state the OpenEVSE is in.
   _sender->sendCmd("$GS", [this, callback](int ret)
@@ -112,8 +114,9 @@ void OpenEVSEClass::getStatus(std::function<void(int ret, uint8_t evse_state, ui
 
 void OpenEVSEClass::getTime(std::function<void(int ret, time_t time)> callback)
 {
-  if (!_sender)
+  if (!_sender) {
     return;
+  }
 
   // GT - get time (RTC)
   // response: $OK yr mo day hr min sec       yr=2-digit year
@@ -172,8 +175,9 @@ void OpenEVSEClass::setTime(time_t time, std::function<void(int ret)> callback)
 
 void OpenEVSEClass::setTime(tm &time, std::function<void(int ret)> callback)
 {
-  if (!_sender)
+  if (!_sender) {
     return;
+  }
 
   char command[64];
   snprintf(command, sizeof(command), "$S1 %d %d %d %d %d %d", 
@@ -203,8 +207,9 @@ void OpenEVSEClass::setTime(tm &time, std::function<void(int ret)> callback)
 
 void OpenEVSEClass::getChargeCurrentAndVoltage(std::function<void(int ret, double amps, double volts)> callback)
 {
-  if (!_sender)
+  if (!_sender) {
     return;
+  }
 
   // GG - get charging current and voltage
   //  response: $OK milliamps millivolts
@@ -232,8 +237,9 @@ void OpenEVSEClass::getChargeCurrentAndVoltage(std::function<void(int ret, doubl
 
 void OpenEVSEClass::getTemperature(std::function<void(int ret, double temp1, bool temp1_valid, double temp2, bool temp2_valid, double temp3, bool temp3_valid)> callback)
 {
-  if (!_sender)
+  if (!_sender) {
     return;
+  }
 
   // GP - get temPerature (v1.0.3+)
   //  response: $OK ds3231temp mcp9808temp tmp007temp
@@ -266,8 +272,9 @@ void OpenEVSEClass::getTemperature(std::function<void(int ret, double temp1, boo
 
 void OpenEVSEClass::setVoltage(uint32_t milliVolts, std::function<void(int ret)> callback)
 {
-  if (!_sender)
+  if (!_sender) {
     return;
+  }
 
   char command[64];
   snprintf(command, sizeof(command), "$SV %u", milliVolts);
@@ -293,10 +300,44 @@ void OpenEVSEClass::setVoltage(double volts, std::function<void(int ret)> callba
   setVoltage((uint32_t)round(volts * 1000), callback);
 }
 
+void OpenEVSEClass::enable(std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  _sender->sendCmd("$FE", [this, callback](int ret) {
+    callback(ret);
+  });
+}
+
+void OpenEVSEClass::sleep(std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  _sender->sendCmd("$FS", [this, callback](int ret) {
+    callback(ret);
+  });
+}
+
+void OpenEVSEClass::disable(std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  _sender->sendCmd("$FD", [this, callback](int ret) {
+    callback(ret);
+  });
+}
+
 void OpenEVSEClass::onEvent()
 {
-  if (!_sender)
+  if (!_sender) {
     return;
+  }
 
   DBUGF("Got ASYNC event %s", _sender->getToken(0));
 

@@ -94,6 +94,10 @@ class OpenEVSEClass
     void setVoltage(uint32_t milliVolts, std::function<void(int ret)> callback);
     void setVoltage(double volts, std::function<void(int ret)> callback);
 
+    void enable(std::function<void(int ret)> callback);
+    void sleep(std::function<void(int ret)> callback);
+    void disable(std::function<void(int ret)> callback);
+
     bool isConnected() {
       return _connected;
     }
