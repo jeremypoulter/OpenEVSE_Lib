@@ -300,6 +300,66 @@ void OpenEVSEClass::setVoltage(double volts, std::function<void(int ret)> callba
   setVoltage((uint32_t)round(volts * 1000), callback);
 }
 
+void OpenEVSEClass::getTimer(std::function<void(int ret, int start_hour, int start_minute, int end_hour, int end_minute)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // GD - get Delay timer
+  //  response: $OK starthr startmin endhr endmin
+  //    all values decimal
+  //    if timer disabled, starthr=startmin=endhr=endmin=0
+
+  _sender->sendCmd("$GD", [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 5)
+      {
+        int starthr = strtol(_sender->getToken(1), NULL, 10);
+        int startmin = strtol(_sender->getToken(2), NULL, 10);
+        int endhr = strtol(_sender->getToken(3), NULL, 10);
+        int endmin = strtol(_sender->getToken(4), NULL, 10);
+
+        callback(ret, starthr, startmin, endhr, endmin);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0, 0, 0, 0);
+      }
+    } else {
+      callback(ret, 0, 0, 0, 0);
+    }
+  });
+}
+
+void OpenEVSEClass::setTimer(int start_hour, int start_minute, int end_hour, int end_minute, std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // ST starthr startmin endhr endmin - set timer
+  //  $ST 0 0 0 0*0B - cancel timer
+
+  char command[64];
+  snprintf(command, sizeof(command), "$ST %d %d %d %d", start_hour, start_minute, end_hour, end_minute);
+
+  _sender->sendCmd(command, [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 1)
+      {
+        callback(RAPI_RESPONSE_OK);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE);
+      }
+    } else {
+      callback(ret);
+    }
+  });
+}
+
 void OpenEVSEClass::enable(std::function<void(int ret)> callback)
 {
   if (!_sender) {

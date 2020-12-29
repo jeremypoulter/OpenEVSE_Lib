@@ -94,6 +94,12 @@ class OpenEVSEClass
     void setVoltage(uint32_t milliVolts, std::function<void(int ret)> callback);
     void setVoltage(double volts, std::function<void(int ret)> callback);
 
+    void getTimer(std::function<void(int ret, int start_hour, int start_minute, int end_hour, int end_minute)> callback);
+    void setTimer(int start_hour, int start_minute, int end_hour, int end_minute, std::function<void(int ret)> callback);
+    void clearTimer(std::function<void(int ret)> callback) {
+      setTimer(0, 0, 0, 0, callback);
+    }
+
     void enable(std::function<void(int ret)> callback);
     void sleep(std::function<void(int ret)> callback);
     void disable(std::function<void(int ret)> callback);
