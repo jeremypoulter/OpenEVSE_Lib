@@ -54,10 +54,28 @@
 
 #define OPENEVSE_OCPP_SUPPORT_PROTOCOL_VERSION  OPENEVSE_ENCODE_VERSION(5,0,0)
 
+#define OPENEVSE_LCD_OFF      0
+#define OPENEVSE_LCD_RED      1
+#define OPENEVSE_LCD_YELLOW   3
+#define OPENEVSE_LCD_GREEN    2
+#define OPENEVSE_LCD_TEAL     6
+#define OPENEVSE_LCD_BLUE     4
+#define OPENEVSE_LCD_VIOLET   5
+#define OPENEVSE_LCD_WHITE    7
+
+#define OPENEVSE_FEATURE_BUTTON             'B' // disable/enable front panel button
+#define OPENEVSE_FEATURE_DIODE_CKECK        'D' // Diode check
+#define OPENEVSE_FEATURE_ECHO               'E' // command Echo
+#define OPENEVSE_FEATURE_GFI_SELF_TEST      'F' // GFI self test
+#define OPENEVSE_FEATURE_GROUND_CHECK       'G' // Ground check
+#define OPENEVSE_FEATURE_RELAY_CKECK        'R' // stuck Relay check
+#define OPENEVSE_FEATURE_TEMPURATURE_CHECK  'T' // temperature monitoring
+#define OPENEVSE_FEATURE_VENT_CHECK         'V' // Vent required check
 
 typedef std::function<void(uint8_t post_code, const char *firmware)> OpenEVSEBootCallback;
 typedef std::function<void(uint8_t evse_state, uint8_t pilot_state, uint32_t current_capacity, uint32_t vflags)> OpenEVSEStateCallback;
 typedef std::function<void(uint8_t event)> OpenEVSEWiFiCallback;
+typedef std::function<void(uint8_t event)> OpenEVSEButtonCallback;
 
 class OpenEVSEClass
 {
@@ -70,6 +88,7 @@ class OpenEVSEClass
     OpenEVSEBootCallback _boot;
     OpenEVSEStateCallback _state;
     OpenEVSEWiFiCallback _wifi;
+    OpenEVSEButtonCallback _button;
 
     void onEvent();
 
@@ -103,6 +122,13 @@ class OpenEVSEClass
     void enable(std::function<void(int ret)> callback);
     void sleep(std::function<void(int ret)> callback);
     void disable(std::function<void(int ret)> callback);
+    void restart(std::function<void(int ret)> callback);
+
+    void lcdEnable(bool enable, std::function<void(int ret)> callback);
+    void lcdSetColour(int colour, std::function<void(int ret)> callback);
+    void lcdDisplayText(int x, int y, const char *text, std::function<void(int ret)> callback);
+
+    void feature(uint8_t feature, bool enable, std::function<void(int ret)> callback);
 
     bool isConnected() {
       return _connected;
@@ -116,6 +142,9 @@ class OpenEVSEClass
     }
     void onWiFi(OpenEVSEWiFiCallback callback) {
       _wifi = callback;
+    }
+    void onButton(OpenEVSEButtonCallback callback) {
+      _button = callback;
     }
 };
 

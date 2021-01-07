@@ -366,6 +366,9 @@ void OpenEVSEClass::enable(std::function<void(int ret)> callback)
     return;
   }
 
+  // FE - enable EVSE
+  //  $FE*AF
+
   _sender->sendCmd("$FE", [this, callback](int ret) {
     callback(ret);
   });
@@ -376,6 +379,9 @@ void OpenEVSEClass::sleep(std::function<void(int ret)> callback)
   if (!_sender) {
     return;
   }
+
+  // FS - sleep EVSE
+  //  $FS*BD
 
   _sender->sendCmd("$FS", [this, callback](int ret) {
     callback(ret);
@@ -388,10 +394,122 @@ void OpenEVSEClass::disable(std::function<void(int ret)> callback)
     return;
   }
 
+  // FR - restart EVSE
+  //  $FR*BC
+
   _sender->sendCmd("$FD", [this, callback](int ret) {
     callback(ret);
   });
 }
+
+void OpenEVSEClass::restart(std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // FD - disable EVSE
+  //  $FD*AE
+
+  _sender->sendCmd("$FR", [this, callback](int ret) {
+    callback(ret);
+  });
+}
+
+void OpenEVSEClass::feature(uint8_t feature, bool enable, std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // FF - enable/disable feature
+  //  $FF feature_id 0|1
+  //  0|1 0=disable 1=enable
+  //  feature_id:
+  //   B = disable/enable front panel button
+  //   D = Diode check
+  //   E = command Echo
+  //    use this for interactive terminal sessions with RAPI.
+  //    RAPI will echo back characters as they are typed, and add a <LF> character
+  //    after its replies. Valid only over a serial connection, DO NOT USE on I2C
+  //   F = GFI self test
+  //   G = Ground check
+  //   R = stuck Relay check
+  //   T = temperature monitoring
+  //   V = Vent required check
+  //  $FF D 0 - disable diode check
+  //  $FF G 1 - enable ground check
+
+  char command[64];
+  snprintf(command, sizeof(command), "$FF %c %d", feature, enable ? 1 : 0);
+
+  _sender->sendCmd(command, [this, callback](int ret) {
+    callback(ret);
+  });
+}
+
+void OpenEVSEClass::lcdEnable(bool enable, std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // F0 {1|0}- enable/disable display updates
+  //      enables/disables g_OBD.Update()
+  //  $F0 1^43 - enable display updates and call g_OBD.Update()
+  //  $F0 0^42 - disable display updates
+
+  char command[64];
+  snprintf(command, sizeof(command), "$F0 %d", enable ? 1 : 0);
+
+  _sender->sendCmd(command, [this, callback](int ret) {
+    callback(ret);
+  });
+}
+
+void OpenEVSEClass::lcdSetColour(int colour, std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // FB color - set LCD backlight color
+  // colors:
+  //  OFF 0
+  //  RED 1
+  //  YELLOW 3
+  //  GREEN 2
+  //  TEAL 6
+  //  BLUE 4
+  //  VIOLET 5
+  //  WHITE 7 
+  //
+  //  $FB 7*03 - set backlight to white
+
+  char command[64];
+  snprintf(command, sizeof(command), "$FB %d", colour);
+
+  _sender->sendCmd(command, [this, callback](int ret) {
+    callback(ret);
+  });
+}
+
+void OpenEVSEClass::lcdDisplayText(int x, int y, const char *text, std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // FP x y text - print text on lcd display
+
+  char command[64];
+  snprintf(command, sizeof(command), "$FP %d %d %s", x, y, text);
+
+  _sender->sendCmd(command, [this, callback](int ret) {
+    callback(ret);
+  });
+}
+
 
 void OpenEVSEClass::onEvent()
 {
