@@ -107,8 +107,8 @@ class OpenEVSEClass
     void setTime(tm &time, std::function<void(int ret)> callback);
 
     void getChargeCurrentAndVoltage(std::function<void(int ret, double amps, double volts)> callback);
-    
     void getTemperature(std::function<void(int ret, double temp1, bool temp1_valid, double temp2, bool temp2_valid, double temp3, bool temp3_valid)> callback);
+    void getEnergy(std::function<void(int ret, double session, double total)> callback);
 
     void setVoltage(uint32_t milliVolts, std::function<void(int ret)> callback);
     void setVoltage(double volts, std::function<void(int ret)> callback);

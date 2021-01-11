@@ -270,6 +270,39 @@ void OpenEVSEClass::getTemperature(std::function<void(int ret, double temp1, boo
   });
 }
 
+void OpenEVSEClass::getEnergy(std::function<void(int ret, double session_wh, double total_kwh)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // GU - get energy usage (v1.0.3+)
+  //  response: $OK Wattseconds Whacc
+  //  Wattseconds - Watt-seconds used this charging session, note you'll divide Wattseconds by 3600
+  //                to get Wh
+  //  Whacc - total Wh accumulated over all charging sessions, note you'll divide Wh by 1000 to get
+  //          kWh
+  //  $GU^36
+
+  _sender->sendCmd("$GU", [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 3)
+      {
+        long wattseconds = strtol(_sender->getToken(1), NULL, 10);
+        long whacc = strtol(_sender->getToken(2), NULL, 10);
+
+        callback(ret, (double)wattseconds / 3600.0, (double)whacc / 1000.0);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0, 0);
+      }
+    } else {
+      callback(ret, 0, 0);
+    }
+  });
+}
+
 void OpenEVSEClass::setVoltage(uint32_t milliVolts, std::function<void(int ret)> callback)
 {
   if (!_sender) {
