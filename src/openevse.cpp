@@ -303,6 +303,41 @@ void OpenEVSEClass::getEnergy(std::function<void(int ret, double session_wh, dou
   });
 }
 
+void OpenEVSEClass::getFaultCounters(std::function<void(int ret, long gfci_count, long nognd_count, long stuck_count)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // GF - get fault counters
+  //  response: $OK gfitripcnt nogndtripcnt stuckrelaytripcnt (all values hex)
+  //  maximum trip count = 0xFF for any counter
+  //  $GF^25
+
+  _sender->sendCmd("$GF", [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 4)
+      {
+        const char *val;
+        val = _sender->getToken(1);
+        long gfci_count = strtol(val, NULL, 16);
+        val = _sender->getToken(2);
+        long nognd_count = strtol(val, NULL, 16);
+        val = _sender->getToken(3);
+        long stuck_count = strtol(val, NULL, 16);
+
+        callback(ret, gfci_count, nognd_count, stuck_count);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0, 0, 0);
+      }
+    } else {
+      callback(ret, 0, 0, 0);
+    }
+  });
+}
+
 void OpenEVSEClass::setVoltage(uint32_t milliVolts, std::function<void(int ret)> callback)
 {
   if (!_sender) {
