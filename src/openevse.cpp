@@ -22,6 +22,13 @@ OpenEVSEClass::OpenEVSEClass() :
 
 void OpenEVSEClass::begin(RapiSender &sender, std::function<void(bool connected)> callback)
 {
+  begin(sender, [this, callback](bool connected, const char *firmware, const char *protocol) {
+    callback(connected);
+  });
+}
+
+void OpenEVSEClass::begin(RapiSender &sender, std::function<void(bool connected, const char *firmware, const char *protocol)> callback)
+{
   _connected = false;
   _sender = &sender;
 
@@ -39,7 +46,7 @@ void OpenEVSEClass::begin(RapiSender &sender, std::function<void(bool connected)
       }
     }
 
-    callback(_connected);
+    callback(_connected, firmware, protocol);
   });
 }
 
