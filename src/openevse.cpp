@@ -345,6 +345,80 @@ void OpenEVSEClass::getFaultCounters(std::function<void(int ret, long gfci_count
   });
 }
 
+void OpenEVSEClass::getSettings(std::function<void(int ret, long pilot, uint32_t flags)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // GE - get settings
+  //  response: $OK amps(decimal) flags(hex)
+  //  $GE^26
+
+  _sender->sendCmd("$GE", [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 3)
+      {
+        const char *val;
+        val = _sender->getToken(1);
+        long pilot = strtol(val, NULL, 10);
+        val = _sender->getToken(2);
+        long flags = strtol(val, NULL, 16);
+
+        callback(ret, pilot, (uint32_t)flags);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0, 0);
+      }
+    } else {
+      callback(ret, 0, 0);
+    }
+  });
+}
+
+void OpenEVSEClass::getCurrentCapacity(std::function<void(int ret, long min_current, long pilot, long max_configured_current, long max_hardware_current)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // GC - get current capacity info
+  //  response: $OK minamps hmaxamps pilotamps cmaxamps
+  //  all values decimal
+  //  minamps - min allowed current capacity
+  //  hmaxamps - max hardware allowed current capacity MAX_CURRENT_CAPACITY_Ln
+  //  pilotamps - current capacity advertised by pilot
+  //  cmaxamps - max configured allowed current capacity (saved to EEPROM)
+  //  n.b. maxamps,emaxamps values are dependent on the active service level (L1/L2)
+  //  $GC^20
+
+  _sender->sendCmd("$GC", [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 5)
+      {
+        const char *val;
+        val = _sender->getToken(1);
+        long min_current = strtol(val, NULL, 10);
+        val = _sender->getToken(2);
+        long max_hardware_current = strtol(val, NULL, 10);
+        val = _sender->getToken(3);
+        long pilot = strtol(val, NULL, 10);
+        val = _sender->getToken(4);
+        long max_configured_current = strtol(val, NULL, 10);
+
+        callback(ret, min_current, max_hardware_current, pilot, max_configured_current);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0, 0, 0, 0);
+      }
+    } else {
+      callback(ret, 0, 0, 0, 0);
+    }
+  });
+}
+
 void OpenEVSEClass::setVoltage(uint32_t milliVolts, std::function<void(int ret)> callback)
 {
   if (!_sender) {

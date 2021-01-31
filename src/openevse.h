@@ -27,6 +27,21 @@
 #define OPENEVSE_POST_CODE_STUCK_RELAY            8
 #define OPENEVSE_POST_CODE_GFI_SELF_TEST_FAILED   9
 
+// J1772EVSEController m_wFlags bits - saved to EEPROM
+#define OPENEVSE_ECF_L2                 0x0001 // service level 2
+#define OPENEVSE_ECF_DIODE_CHK_DISABLED 0x0002 // no diode check
+#define OPENEVSE_ECF_VENT_REQ_DISABLED  0x0004 // no vent required state
+#define OPENEVSE_ECF_GND_CHK_DISABLED   0x0008 // no chk for ground fault
+#define OPENEVSE_ECF_STUCK_RELAY_CHK_DISABLED 0x0010 // no chk for stuck relay
+#define OPENEVSE_ECF_AUTO_SVC_LEVEL_DISABLED  0x0020 // auto detect svc level - requires ADVPWR
+// Ability set the EVSE for manual button press to start charging - GoldServe
+#define OPENEVSE_ECF_AUTO_START_DISABLED 0x0040  // no auto start charging
+#define OPENEVSE_ECF_SERIAL_DBG         0x0080 // enable debugging messages via serial
+#define OPENEVSE_ECF_MONO_LCD           0x0100 // monochrome LCD backlight
+#define OPENEVSE_ECF_GFI_TEST_DISABLED  0x0200 // no GFI self test
+#define OPENEVSE_ECF_TEMP_CHK_DISABLED  0x0400 // no Temperature Monitoring
+#define OPENEVSE_ECF_BUTTON_DISABLED    0x8000 // front panel button disabled
+
 // J1772EVSEController volatile m_wVFlags bits - not saved to EEPROM
 #define OPENEVSE_VFLAG_AUTOSVCLVL_SKIPPED   0x0001 // auto svc level test skipped during post
 #define OPENEVSE_VFLAG_HARD_FAULT           0x0002 // in non-autoresettable fault
@@ -72,6 +87,8 @@
 #define OPENEVSE_FEATURE_TEMPURATURE_CHECK  'T' // temperature monitoring
 #define OPENEVSE_FEATURE_VENT_CHECK         'V' // Vent required check
 
+
+
 typedef std::function<void(uint8_t post_code, const char *firmware)> OpenEVSEBootCallback;
 typedef std::function<void(uint8_t evse_state, uint8_t pilot_state, uint32_t current_capacity, uint32_t vflags)> OpenEVSEStateCallback;
 typedef std::function<void(uint8_t event)> OpenEVSEWiFiCallback;
@@ -111,6 +128,8 @@ class OpenEVSEClass
     void getTemperature(std::function<void(int ret, double temp1, bool temp1_valid, double temp2, bool temp2_valid, double temp3, bool temp3_valid)> callback);
     void getEnergy(std::function<void(int ret, double session, double total)> callback);
     void getFaultCounters(std::function<void(int ret, long gfci_count, long nognd_count, long stuck_count)> callback);
+    void getSettings(std::function<void(int ret, long pilot, uint32_t flags)> callback);
+    void getCurrentCapacity(std::function<void(int ret, long min_current, long pilot, long max_configured_current, long max_hardware_current)> callback);
 
     void setVoltage(uint32_t milliVolts, std::function<void(int ret)> callback);
     void setVoltage(double volts, std::function<void(int ret)> callback);
