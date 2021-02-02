@@ -151,6 +151,12 @@ class OpenEVSEClass
 
     void feature(uint8_t feature, bool enable, std::function<void(int ret)> callback);
 
+    void heartbeatEnable(int interval, int current, std::function<void(int ret, int interval, int current, int triggered)> callback);
+    void heartbeatPulse(bool ack_missed, std::function<void(int ret)> callback);
+    void heartbeatPulse(std::function<void(int ret)> callback) {
+      heartbeatPulse(true, callback);
+    }
+
     bool isConnected() {
       return _connected;
     }

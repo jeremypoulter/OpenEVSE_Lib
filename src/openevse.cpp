@@ -659,6 +659,81 @@ void OpenEVSEClass::lcdDisplayText(int x, int y, const char *text, std::function
   });
 }
 
+void OpenEVSEClass::heartbeatEnable(int interval, int current, std::function<void(int ret, int interval, int current, int triggered)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // SY heartbeatinterval hearbeatcurrentlimit
+  //  Response includes heartbeatinterval hearbeatcurrentlimit hearbeattrigger
+  //  hearbeattrigger: 0 - There has never been a missed pulse, 
+  //  2 - there is a missed pulse, and HS is still in current limit
+  //  1 - There was a missed pulse once, but it has since been acknowledged. Ampacity has been successfully restored to max permitted 
+  //  $SY 100 6  //If no pulse for 100 seconds, set EVE ampacity limit to 6A until missed pulse is acknowledged
+  //  $SY        //This is a heartbeat supervision pulse.  Need one every heartbeatinterval seconds.
+  //  $SY 165    //This is an acknowledgement of a missed pulse.  Magic Cookie = 165 (=0XA5)
+  //  When you send a pulse, an NK response indicates that a previous pulse was missed and has not yet been acked
+
+  char command[64];
+  snprintf(command, sizeof(command), "$SY %d %d", interval, current);
+
+  _sender->sendCmd(command, [this, callback](int ret) 
+  {
+    if(RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 4)
+      {
+        int interval = strtol(_sender->getToken(1), NULL, 10);
+        int current = strtol(_sender->getToken(2), NULL, 10);
+        int triggered = strtol(_sender->getToken(3), NULL, 10);
+
+        callback(ret, interval, current, triggered);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0, 0, 0);
+      }
+    } else {
+      callback(ret, 0, 0, 0);
+    }
+  });
+}
+
+void OpenEVSEClass::heartbeatPulse(bool ack_missed, std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // SY heartbeatinterval hearbeatcurrentlimit
+  //  Response includes heartbeatinterval hearbeatcurrentlimit hearbeattrigger
+  //  hearbeattrigger: 0 - There has never been a missed pulse, 
+  //  2 - there is a missed pulse, and HS is still in current limit
+  //  1 - There was a missed pulse once, but it has since been acknowledged. Ampacity has been successfully restored to max permitted 
+  //  $SY 100 6  //If no pulse for 100 seconds, set EVE ampacity limit to 6A until missed pulse is acknowledged
+  //  $SY        //This is a heartbeat supervision pulse.  Need one every heartbeatinterval seconds.
+  //  $SY 165    //This is an acknowledgement of a missed pulse.  Magic Cookie = 165 (=0XA5)
+  //  When you send a pulse, an NK response indicates that a previous pulse was missed and has not yet been acked
+
+  char command[64];
+  snprintf(command, sizeof(command), "$SY");
+
+  _sender->sendCmd(command, [this, callback, ack_missed](int ret) 
+  {
+    if(RAPI_RESPONSE_OK == ret) {
+      callback(RAPI_RESPONSE_OK);
+    }
+    else if(RAPI_RESPONSE_NK == ret && ack_missed) 
+    {
+      char command[64];
+      snprintf(command, sizeof(command), "$SY 165");
+      _sender->sendCmd(command, [this, callback](int ret) {
+        callback(ret);
+      });
+    } else {
+      callback(ret);
+    }
+  });
+}
 
 void OpenEVSEClass::onEvent()
 {
