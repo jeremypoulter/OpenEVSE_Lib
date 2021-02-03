@@ -92,7 +92,7 @@
 typedef std::function<void(uint8_t post_code, const char *firmware)> OpenEVSEBootCallback;
 typedef std::function<void(uint8_t evse_state, uint8_t pilot_state, uint32_t current_capacity, uint32_t vflags)> OpenEVSEStateCallback;
 typedef std::function<void(uint8_t event)> OpenEVSEWiFiCallback;
-typedef std::function<void(uint8_t event)> OpenEVSEButtonCallback;
+typedef std::function<void(uint8_t long_press)> OpenEVSEButtonCallback;
 
 class OpenEVSEClass
 {

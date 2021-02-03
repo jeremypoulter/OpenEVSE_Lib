@@ -795,6 +795,15 @@ void OpenEVSEClass::onEvent()
       _boot(post_code, _sender->getToken(2));
     }
   }
+  else if(!strcmp(_sender->getToken(0), "$AN"))
+  {
+    const char *val = _sender->getToken(1);
+    uint8_t log_press = strtol(val, NULL, 10);
+
+    if(_button) {
+      _button(log_press);
+    }
+  }
 }
 
 OpenEVSEClass OpenEVSE;
