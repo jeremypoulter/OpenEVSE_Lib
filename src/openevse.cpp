@@ -419,11 +419,60 @@ void OpenEVSEClass::getCurrentCapacity(std::function<void(int ret, long min_curr
   });
 }
 
+void OpenEVSEClass::setCurrentCapacity(long amps, bool save, std::function<void(int ret, long pilot)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // SC amps [V|M]- set current capacity
+  //  response:
+  //    if amps < minimum current capacity, will set to minimum and return $NK ampsset
+  //    if amps > maximum current capacity, will set to maximum and return $NK ampsset
+  //    if in over temperature status, raising current capacity will fail and return $NK ampsset
+  //    otherwise return $OK ampsset
+  //    ampsset: the resultant current capacity
+  //    default action is to save new current capacity to EEPROM for the currently active service level.
+  //    if V is specified, then new current capacity is volatile, and will be
+  //      reset to previous value at next reboot
+  //    if M is specified, sets maximum L2 current capacity for the unit and writes
+  //      to EEPROM. subsequent calls the $SC cannot exceed value set bye $SC M
+  //      the value cannot be changed/erased via RAPI commands. Subsequent calls
+  //      to $SC M will return $NK
+
+  char command[64];
+  snprintf(command, sizeof(command), "$SC %ld %s", amps, save ? "M" : "V");
+
+  _sender->sendCmd(command, [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret || RAPI_RESPONSE_NK == ret)
+    {
+      if(_sender->getTokenCnt() >= 2)
+      {
+        const char *val = _sender->getToken(1);
+        long pilot = strtol(val, NULL, 10);
+
+        callback(ret, pilot);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0);
+      }
+    } else {
+      callback(ret, 0);
+    }
+  });
+}
+
 void OpenEVSEClass::setVoltage(uint32_t milliVolts, std::function<void(int ret)> callback)
 {
   if (!_sender) {
     return;
   }
+
+  // SV mv - Set Voltage for power calculations to mv millivolts
+  //  $SV 223576 - set voltage to 223.576
+  //  NOTES:
+  //   - only available if VOLTMETER not defined and KWH_RECORDING defined
+  //   - volatile - value is lost, and replaced with VOLTS_FOR_Lx at boot
 
   char command[64];
   snprintf(command, sizeof(command), "$SV %u", milliVolts);

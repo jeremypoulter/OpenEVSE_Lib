@@ -129,7 +129,9 @@ class OpenEVSEClass
     void getEnergy(std::function<void(int ret, double session, double total)> callback);
     void getFaultCounters(std::function<void(int ret, long gfci_count, long nognd_count, long stuck_count)> callback);
     void getSettings(std::function<void(int ret, long pilot, uint32_t flags)> callback);
+
     void getCurrentCapacity(std::function<void(int ret, long min_current, long pilot, long max_configured_current, long max_hardware_current)> callback);
+    void setCurrentCapacity(long amps, bool save, std::function<void(int ret, long pilot)> callback);
 
     void setVoltage(uint32_t milliVolts, std::function<void(int ret)> callback);
     void setVoltage(double volts, std::function<void(int ret)> callback);
