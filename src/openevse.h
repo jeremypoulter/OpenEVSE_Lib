@@ -71,11 +71,11 @@
 
 #define OPENEVSE_LCD_OFF      0
 #define OPENEVSE_LCD_RED      1
-#define OPENEVSE_LCD_YELLOW   3
 #define OPENEVSE_LCD_GREEN    2
-#define OPENEVSE_LCD_TEAL     6
+#define OPENEVSE_LCD_YELLOW   3
 #define OPENEVSE_LCD_BLUE     4
 #define OPENEVSE_LCD_VIOLET   5
+#define OPENEVSE_LCD_TEAL     6
 #define OPENEVSE_LCD_WHITE    7
 
 #define OPENEVSE_FEATURE_BUTTON             'B' // disable/enable front panel button
