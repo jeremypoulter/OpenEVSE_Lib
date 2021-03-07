@@ -22,6 +22,13 @@ OpenEVSEClass::OpenEVSEClass() :
 
 void OpenEVSEClass::begin(RapiSender &sender, std::function<void(bool connected)> callback)
 {
+  begin(sender, [this, callback](bool connected, const char *firmware, const char *protocol) {
+    callback(connected);
+  });
+}
+
+void OpenEVSEClass::begin(RapiSender &sender, std::function<void(bool connected, const char *firmware, const char *protocol)> callback)
+{
   _connected = false;
   _sender = &sender;
 
@@ -39,7 +46,7 @@ void OpenEVSEClass::begin(RapiSender &sender, std::function<void(bool connected)
       }
     }
 
-    callback(_connected);
+    callback(_connected, firmware, protocol);
   });
 }
 
@@ -270,11 +277,202 @@ void OpenEVSEClass::getTemperature(std::function<void(int ret, double temp1, boo
   });
 }
 
+void OpenEVSEClass::getEnergy(std::function<void(int ret, double session_wh, double total_kwh)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // GU - get energy usage (v1.0.3+)
+  //  response: $OK Wattseconds Whacc
+  //  Wattseconds - Watt-seconds used this charging session, note you'll divide Wattseconds by 3600
+  //                to get Wh
+  //  Whacc - total Wh accumulated over all charging sessions, note you'll divide Wh by 1000 to get
+  //          kWh
+  //  $GU^36
+
+  _sender->sendCmd("$GU", [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 3)
+      {
+        long wattseconds = strtol(_sender->getToken(1), NULL, 10);
+        long whacc = strtol(_sender->getToken(2), NULL, 10);
+
+        callback(ret, (double)wattseconds / 3600.0, (double)whacc / 1000.0);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0, 0);
+      }
+    } else {
+      callback(ret, 0, 0);
+    }
+  });
+}
+
+void OpenEVSEClass::getFaultCounters(std::function<void(int ret, long gfci_count, long nognd_count, long stuck_count)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // GF - get fault counters
+  //  response: $OK gfitripcnt nogndtripcnt stuckrelaytripcnt (all values hex)
+  //  maximum trip count = 0xFF for any counter
+  //  $GF^25
+
+  _sender->sendCmd("$GF", [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 4)
+      {
+        const char *val;
+        val = _sender->getToken(1);
+        long gfci_count = strtol(val, NULL, 16);
+        val = _sender->getToken(2);
+        long nognd_count = strtol(val, NULL, 16);
+        val = _sender->getToken(3);
+        long stuck_count = strtol(val, NULL, 16);
+
+        callback(ret, gfci_count, nognd_count, stuck_count);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0, 0, 0);
+      }
+    } else {
+      callback(ret, 0, 0, 0);
+    }
+  });
+}
+
+void OpenEVSEClass::getSettings(std::function<void(int ret, long pilot, uint32_t flags)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // GE - get settings
+  //  response: $OK amps(decimal) flags(hex)
+  //  $GE^26
+
+  _sender->sendCmd("$GE", [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 3)
+      {
+        const char *val;
+        val = _sender->getToken(1);
+        long pilot = strtol(val, NULL, 10);
+        val = _sender->getToken(2);
+        long flags = strtol(val, NULL, 16);
+
+        callback(ret, pilot, (uint32_t)flags);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0, 0);
+      }
+    } else {
+      callback(ret, 0, 0);
+    }
+  });
+}
+
+void OpenEVSEClass::getCurrentCapacity(std::function<void(int ret, long min_current, long pilot, long max_configured_current, long max_hardware_current)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // GC - get current capacity info
+  //  response: $OK minamps hmaxamps pilotamps cmaxamps
+  //  all values decimal
+  //  minamps - min allowed current capacity
+  //  hmaxamps - max hardware allowed current capacity MAX_CURRENT_CAPACITY_Ln
+  //  pilotamps - current capacity advertised by pilot
+  //  cmaxamps - max configured allowed current capacity (saved to EEPROM)
+  //  n.b. maxamps,emaxamps values are dependent on the active service level (L1/L2)
+  //  $GC^20
+
+  _sender->sendCmd("$GC", [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 5)
+      {
+        const char *val;
+        val = _sender->getToken(1);
+        long min_current = strtol(val, NULL, 10);
+        val = _sender->getToken(2);
+        long max_hardware_current = strtol(val, NULL, 10);
+        val = _sender->getToken(3);
+        long pilot = strtol(val, NULL, 10);
+        val = _sender->getToken(4);
+        long max_configured_current = strtol(val, NULL, 10);
+
+        callback(ret, min_current, max_hardware_current, pilot, max_configured_current);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0, 0, 0, 0);
+      }
+    } else {
+      callback(ret, 0, 0, 0, 0);
+    }
+  });
+}
+
+void OpenEVSEClass::setCurrentCapacity(long amps, bool save, std::function<void(int ret, long pilot)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // SC amps [V|M]- set current capacity
+  //  response:
+  //    if amps < minimum current capacity, will set to minimum and return $NK ampsset
+  //    if amps > maximum current capacity, will set to maximum and return $NK ampsset
+  //    if in over temperature status, raising current capacity will fail and return $NK ampsset
+  //    otherwise return $OK ampsset
+  //    ampsset: the resultant current capacity
+  //    default action is to save new current capacity to EEPROM for the currently active service level.
+  //    if V is specified, then new current capacity is volatile, and will be
+  //      reset to previous value at next reboot
+  //    if M is specified, sets maximum L2 current capacity for the unit and writes
+  //      to EEPROM. subsequent calls the $SC cannot exceed value set bye $SC M
+  //      the value cannot be changed/erased via RAPI commands. Subsequent calls
+  //      to $SC M will return $NK
+
+  char command[64];
+  snprintf(command, sizeof(command), "$SC %ld %s", amps, save ? "M" : "V");
+
+  _sender->sendCmd(command, [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret || RAPI_RESPONSE_NK == ret)
+    {
+      if(_sender->getTokenCnt() >= 2)
+      {
+        const char *val = _sender->getToken(1);
+        long pilot = strtol(val, NULL, 10);
+
+        callback(ret, pilot);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0);
+      }
+    } else {
+      callback(ret, 0);
+    }
+  });
+}
+
 void OpenEVSEClass::setVoltage(uint32_t milliVolts, std::function<void(int ret)> callback)
 {
   if (!_sender) {
     return;
   }
+
+  // SV mv - Set Voltage for power calculations to mv millivolts
+  //  $SV 223576 - set voltage to 223.576
+  //  NOTES:
+  //   - only available if VOLTMETER not defined and KWH_RECORDING defined
+  //   - volatile - value is lost, and replaced with VOLTS_FOR_Lx at boot
 
   char command[64];
   snprintf(command, sizeof(command), "$SV %u", milliVolts);
@@ -300,11 +498,74 @@ void OpenEVSEClass::setVoltage(double volts, std::function<void(int ret)> callba
   setVoltage((uint32_t)round(volts * 1000), callback);
 }
 
+void OpenEVSEClass::getTimer(std::function<void(int ret, int start_hour, int start_minute, int end_hour, int end_minute)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // GD - get Delay timer
+  //  response: $OK starthr startmin endhr endmin
+  //    all values decimal
+  //    if timer disabled, starthr=startmin=endhr=endmin=0
+
+  _sender->sendCmd("$GD", [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 5)
+      {
+        int starthr = strtol(_sender->getToken(1), NULL, 10);
+        int startmin = strtol(_sender->getToken(2), NULL, 10);
+        int endhr = strtol(_sender->getToken(3), NULL, 10);
+        int endmin = strtol(_sender->getToken(4), NULL, 10);
+
+        callback(ret, starthr, startmin, endhr, endmin);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0, 0, 0, 0);
+      }
+    } else {
+      callback(ret, 0, 0, 0, 0);
+    }
+  });
+}
+
+void OpenEVSEClass::setTimer(int start_hour, int start_minute, int end_hour, int end_minute, std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // ST starthr startmin endhr endmin - set timer
+  //  $ST 0 0 0 0*0B - cancel timer
+
+  char command[64];
+  snprintf(command, sizeof(command), "$ST %d %d %d %d", start_hour, start_minute, end_hour, end_minute);
+
+  _sender->sendCmd(command, [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 1)
+      {
+        callback(RAPI_RESPONSE_OK);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE);
+      }
+    } else {
+      callback(ret);
+    }
+  });
+}
+
 void OpenEVSEClass::enable(std::function<void(int ret)> callback)
 {
   if (!_sender) {
     return;
   }
+
+  // FE - enable EVSE
+  //  $FE*AF
 
   _sender->sendCmd("$FE", [this, callback](int ret) {
     callback(ret);
@@ -317,6 +578,9 @@ void OpenEVSEClass::sleep(std::function<void(int ret)> callback)
     return;
   }
 
+  // FS - sleep EVSE
+  //  $FS*BD
+
   _sender->sendCmd("$FS", [this, callback](int ret) {
     callback(ret);
   });
@@ -328,8 +592,195 @@ void OpenEVSEClass::disable(std::function<void(int ret)> callback)
     return;
   }
 
+  // FR - restart EVSE
+  //  $FR*BC
+
   _sender->sendCmd("$FD", [this, callback](int ret) {
     callback(ret);
+  });
+}
+
+void OpenEVSEClass::restart(std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // FD - disable EVSE
+  //  $FD*AE
+
+  _sender->sendCmd("$FR", [this, callback](int ret) {
+    callback(ret);
+  });
+}
+
+void OpenEVSEClass::feature(uint8_t feature, bool enable, std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // FF - enable/disable feature
+  //  $FF feature_id 0|1
+  //  0|1 0=disable 1=enable
+  //  feature_id:
+  //   B = disable/enable front panel button
+  //   D = Diode check
+  //   E = command Echo
+  //    use this for interactive terminal sessions with RAPI.
+  //    RAPI will echo back characters as they are typed, and add a <LF> character
+  //    after its replies. Valid only over a serial connection, DO NOT USE on I2C
+  //   F = GFI self test
+  //   G = Ground check
+  //   R = stuck Relay check
+  //   T = temperature monitoring
+  //   V = Vent required check
+  //  $FF D 0 - disable diode check
+  //  $FF G 1 - enable ground check
+
+  char command[64];
+  snprintf(command, sizeof(command), "$FF %c %d", feature, enable ? 1 : 0);
+
+  _sender->sendCmd(command, [this, callback](int ret) {
+    callback(ret);
+  });
+}
+
+void OpenEVSEClass::lcdEnable(bool enable, std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // F0 {1|0}- enable/disable display updates
+  //      enables/disables g_OBD.Update()
+  //  $F0 1^43 - enable display updates and call g_OBD.Update()
+  //  $F0 0^42 - disable display updates
+
+  char command[64];
+  snprintf(command, sizeof(command), "$F0 %d", enable ? 1 : 0);
+
+  _sender->sendCmd(command, [this, callback](int ret) {
+    callback(ret);
+  });
+}
+
+void OpenEVSEClass::lcdSetColour(int colour, std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // FB color - set LCD backlight color
+  // colors:
+  //  OFF 0
+  //  RED 1
+  //  YELLOW 3
+  //  GREEN 2
+  //  TEAL 6
+  //  BLUE 4
+  //  VIOLET 5
+  //  WHITE 7 
+  //
+  //  $FB 7*03 - set backlight to white
+
+  char command[64];
+  snprintf(command, sizeof(command), "$FB %d", colour);
+
+  _sender->sendCmd(command, [this, callback](int ret) {
+    callback(ret);
+  });
+}
+
+void OpenEVSEClass::lcdDisplayText(int x, int y, const char *text, std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // FP x y text - print text on lcd display
+
+  char command[64];
+  snprintf(command, sizeof(command), "$FP %d %d %s", x, y, text);
+
+  _sender->sendCmd(command, [this, callback](int ret) {
+    callback(ret);
+  });
+}
+
+void OpenEVSEClass::heartbeatEnable(int interval, int current, std::function<void(int ret, int interval, int current, int triggered)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // SY heartbeatinterval hearbeatcurrentlimit
+  //  Response includes heartbeatinterval hearbeatcurrentlimit hearbeattrigger
+  //  hearbeattrigger: 0 - There has never been a missed pulse, 
+  //  2 - there is a missed pulse, and HS is still in current limit
+  //  1 - There was a missed pulse once, but it has since been acknowledged. Ampacity has been successfully restored to max permitted 
+  //  $SY 100 6  //If no pulse for 100 seconds, set EVE ampacity limit to 6A until missed pulse is acknowledged
+  //  $SY        //This is a heartbeat supervision pulse.  Need one every heartbeatinterval seconds.
+  //  $SY 165    //This is an acknowledgement of a missed pulse.  Magic Cookie = 165 (=0XA5)
+  //  When you send a pulse, an NK response indicates that a previous pulse was missed and has not yet been acked
+
+  char command[64];
+  snprintf(command, sizeof(command), "$SY %d %d", interval, current);
+
+  _sender->sendCmd(command, [this, callback](int ret) 
+  {
+    if(RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 4)
+      {
+        int interval = strtol(_sender->getToken(1), NULL, 10);
+        int current = strtol(_sender->getToken(2), NULL, 10);
+        int triggered = strtol(_sender->getToken(3), NULL, 10);
+
+        callback(ret, interval, current, triggered);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0, 0, 0);
+      }
+    } else {
+      callback(ret, 0, 0, 0);
+    }
+  });
+}
+
+void OpenEVSEClass::heartbeatPulse(bool ack_missed, std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // SY heartbeatinterval hearbeatcurrentlimit
+  //  Response includes heartbeatinterval hearbeatcurrentlimit hearbeattrigger
+  //  hearbeattrigger: 0 - There has never been a missed pulse, 
+  //  2 - there is a missed pulse, and HS is still in current limit
+  //  1 - There was a missed pulse once, but it has since been acknowledged. Ampacity has been successfully restored to max permitted 
+  //  $SY 100 6  //If no pulse for 100 seconds, set EVE ampacity limit to 6A until missed pulse is acknowledged
+  //  $SY        //This is a heartbeat supervision pulse.  Need one every heartbeatinterval seconds.
+  //  $SY 165    //This is an acknowledgement of a missed pulse.  Magic Cookie = 165 (=0XA5)
+  //  When you send a pulse, an NK response indicates that a previous pulse was missed and has not yet been acked
+
+  char command[64];
+  snprintf(command, sizeof(command), "$SY");
+
+  _sender->sendCmd(command, [this, callback, ack_missed](int ret) 
+  {
+    if(RAPI_RESPONSE_OK == ret) {
+      callback(RAPI_RESPONSE_OK);
+    }
+    else if(RAPI_RESPONSE_NK == ret && ack_missed) 
+    {
+      char command[64];
+      snprintf(command, sizeof(command), "$SY 165");
+      _sender->sendCmd(command, [this, callback](int ret) {
+        callback(ret);
+      });
+    } else {
+      callback(ret);
+    }
   });
 }
 
@@ -391,6 +842,15 @@ void OpenEVSEClass::onEvent()
 
     if(_boot) {
       _boot(post_code, _sender->getToken(2));
+    }
+  }
+  else if(!strcmp(_sender->getToken(0), "$AN"))
+  {
+    const char *val = _sender->getToken(1);
+    uint8_t log_press = strtol(val, NULL, 10);
+
+    if(_button) {
+      _button(log_press);
     }
   }
 }
