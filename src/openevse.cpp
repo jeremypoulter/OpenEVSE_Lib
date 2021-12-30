@@ -148,7 +148,7 @@ void OpenEVSEClass::getTime(std::function<void(int ret, time_t time)> callback)
         {
           struct tm tm;
           memset(&tm, 0, sizeof(tm));
-          
+
           tm.tm_year = 100+year;
           tm.tm_mon = month;
           tm.tm_mday = day;
@@ -187,12 +187,12 @@ void OpenEVSEClass::setTime(tm &time, std::function<void(int ret)> callback)
   }
 
   char command[64];
-  snprintf(command, sizeof(command), "$S1 %d %d %d %d %d %d", 
-    time.tm_year % 100, 
-    time.tm_mon, 
-    time.tm_mday, 
-    time.tm_hour, 
-    time.tm_min, 
+  snprintf(command, sizeof(command), "$S1 %d %d %d %d %d %d",
+    time.tm_year % 100,
+    time.tm_mon,
+    time.tm_mday,
+    time.tm_hour,
+    time.tm_min,
     time.tm_sec);
 
   _sender->sendCmd(command, [this, callback](int ret)
@@ -377,6 +377,25 @@ void OpenEVSEClass::getSettings(std::function<void(int ret, long pilot, uint32_t
   });
 }
 
+void OpenEVSEClass::setServiceLevel(uint8_t level, std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // SL 1|2|A  - set service level L1/L2/Auto
+  //  $SL 1*14
+  //  $SL 2*15
+  //  $SL A*24
+
+  char command[8];
+  snprintf(command, sizeof(command), "$SL %c", level);
+
+  _sender->sendCmd(command, [this, callback](int ret) {
+    callback(ret);
+  });
+}
+
 void OpenEVSEClass::getCurrentCapacity(std::function<void(int ret, long min_current, long pilot, long max_configured_current, long max_hardware_current)> callback)
 {
   if (!_sender) {
@@ -458,6 +477,66 @@ void OpenEVSEClass::setCurrentCapacity(long amps, bool save, std::function<void(
       }
     } else {
       callback(ret, 0);
+    }
+  });
+}
+
+
+void OpenEVSEClass::getAmmeterSettings(std::function<void(int ret, long scale, long offset)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // GA - get ammeter settings
+  //  response: $OK currentscalefactor currentoffset
+  //  $GA^22
+
+  _sender->sendCmd("$GA", [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 3)
+      {
+        const char *val;
+        val = _sender->getToken(1);
+        long scale = strtol(val, NULL, 10);
+        val = _sender->getToken(2);
+        long offset = strtol(val, NULL, 10);
+
+        callback(ret, scale, offset);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0, 0);
+      }
+    } else {
+      callback(ret, 0, 0);
+    }
+  });
+}
+
+void OpenEVSEClass::setAmmeterSettings(long scale, long offset, std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // SA currentscalefactor currentoffset - set ammeter settings
+
+  char command[64];
+  snprintf(command, sizeof(command), "$SA %ld %ld", scale, offset);
+
+  _sender->sendCmd(command, [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 2)
+      {
+        callback(ret);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE);
+      }
+    } else {
+      callback(ret);
     }
   });
 }
@@ -680,7 +759,7 @@ void OpenEVSEClass::lcdSetColour(int colour, std::function<void(int ret)> callba
   //  TEAL 6
   //  BLUE 4
   //  VIOLET 5
-  //  WHITE 7 
+  //  WHITE 7
   //
   //  $FB 7*03 - set backlight to white
 
@@ -716,9 +795,9 @@ void OpenEVSEClass::heartbeatEnable(int interval, int current, std::function<voi
 
   // SY heartbeatinterval hearbeatcurrentlimit
   //  Response includes heartbeatinterval hearbeatcurrentlimit hearbeattrigger
-  //  hearbeattrigger: 0 - There has never been a missed pulse, 
+  //  hearbeattrigger: 0 - There has never been a missed pulse,
   //  2 - there is a missed pulse, and HS is still in current limit
-  //  1 - There was a missed pulse once, but it has since been acknowledged. Ampacity has been successfully restored to max permitted 
+  //  1 - There was a missed pulse once, but it has since been acknowledged. Ampacity has been successfully restored to max permitted
   //  $SY 100 6  //If no pulse for 100 seconds, set EVE ampacity limit to 6A until missed pulse is acknowledged
   //  $SY        //This is a heartbeat supervision pulse.  Need one every heartbeatinterval seconds.
   //  $SY 165    //This is an acknowledgement of a missed pulse.  Magic Cookie = 165 (=0XA5)
@@ -727,7 +806,7 @@ void OpenEVSEClass::heartbeatEnable(int interval, int current, std::function<voi
   char command[64];
   snprintf(command, sizeof(command), "$SY %d %d", interval, current);
 
-  _sender->sendCmd(command, [this, callback](int ret) 
+  _sender->sendCmd(command, [this, callback](int ret)
   {
     if(RAPI_RESPONSE_OK == ret)
     {
@@ -755,9 +834,9 @@ void OpenEVSEClass::heartbeatPulse(bool ack_missed, std::function<void(int ret)>
 
   // SY heartbeatinterval hearbeatcurrentlimit
   //  Response includes heartbeatinterval hearbeatcurrentlimit hearbeattrigger
-  //  hearbeattrigger: 0 - There has never been a missed pulse, 
+  //  hearbeattrigger: 0 - There has never been a missed pulse,
   //  2 - there is a missed pulse, and HS is still in current limit
-  //  1 - There was a missed pulse once, but it has since been acknowledged. Ampacity has been successfully restored to max permitted 
+  //  1 - There was a missed pulse once, but it has since been acknowledged. Ampacity has been successfully restored to max permitted
   //  $SY 100 6  //If no pulse for 100 seconds, set EVE ampacity limit to 6A until missed pulse is acknowledged
   //  $SY        //This is a heartbeat supervision pulse.  Need one every heartbeatinterval seconds.
   //  $SY 165    //This is an acknowledgement of a missed pulse.  Magic Cookie = 165 (=0XA5)
@@ -766,12 +845,12 @@ void OpenEVSEClass::heartbeatPulse(bool ack_missed, std::function<void(int ret)>
   char command[64];
   snprintf(command, sizeof(command), "$SY");
 
-  _sender->sendCmd(command, [this, callback, ack_missed](int ret) 
+  _sender->sendCmd(command, [this, callback, ack_missed](int ret)
   {
     if(RAPI_RESPONSE_OK == ret) {
       callback(RAPI_RESPONSE_OK);
     }
-    else if(RAPI_RESPONSE_NK == ret && ack_missed) 
+    else if(RAPI_RESPONSE_NK == ret && ack_missed)
     {
       char command[64];
       snprintf(command, sizeof(command), "$SY 165");

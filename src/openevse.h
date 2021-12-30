@@ -87,7 +87,9 @@
 #define OPENEVSE_FEATURE_TEMPURATURE_CHECK  'T' // temperature monitoring
 #define OPENEVSE_FEATURE_VENT_CHECK         'V' // Vent required check
 
-
+#define OPENEVSE_SERVICE_LEVEL_AUTO         'A'
+#define OPENEVSE_SERVICE_LEVEL_L1           '1'
+#define OPENEVSE_SERVICE_LEVEL_L2           '2'
 
 typedef std::function<void(uint8_t post_code, const char *firmware)> OpenEVSEBootCallback;
 typedef std::function<void(uint8_t evse_state, uint8_t pilot_state, uint32_t current_capacity, uint32_t vflags)> OpenEVSEStateCallback;
@@ -130,8 +132,13 @@ class OpenEVSEClass
     void getFaultCounters(std::function<void(int ret, long gfci_count, long nognd_count, long stuck_count)> callback);
     void getSettings(std::function<void(int ret, long pilot, uint32_t flags)> callback);
 
+    void setServiceLevel(uint8_t level, std::function<void(int ret)> callback);
+
     void getCurrentCapacity(std::function<void(int ret, long min_current, long pilot, long max_configured_current, long max_hardware_current)> callback);
     void setCurrentCapacity(long amps, bool save, std::function<void(int ret, long pilot)> callback);
+
+    void getAmmeterSettings(std::function<void(int ret, long scale, long offset)> callback);
+    void setAmmeterSettings(long scale, long offset, std::function<void(int ret)> callback);
 
     void setVoltage(uint32_t milliVolts, std::function<void(int ret)> callback);
     void setVoltage(double volts, std::function<void(int ret)> callback);
