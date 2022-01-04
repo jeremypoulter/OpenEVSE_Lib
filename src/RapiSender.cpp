@@ -343,3 +343,14 @@ RapiSender::loop()
     _commandComplete(RAPI_RESPONSE_TIMEOUT);
   }
 }
+
+void RapiSender::flush()
+{
+  DBUGLN("RapiSender::flush()");
+  while(hasPendingCommands() || _waitingForReply)
+  {
+    DBUGVAR(hasPendingCommands());
+    DBUGVAR(_waitingForReply);
+    loop();
+  }
+}
