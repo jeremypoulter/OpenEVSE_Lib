@@ -131,6 +131,7 @@ class OpenEVSEClass
     void getEnergy(std::function<void(int ret, double session, double total)> callback);
     void getFaultCounters(std::function<void(int ret, long gfci_count, long nognd_count, long stuck_count)> callback);
     void getSettings(std::function<void(int ret, long pilot, uint32_t flags)> callback);
+    void getSerial(std::function<void(int ret, const char *serial)> callback);
 
     void setServiceLevel(uint8_t level, std::function<void(int ret)> callback);
 

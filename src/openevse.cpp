@@ -377,6 +377,43 @@ void OpenEVSEClass::getSettings(std::function<void(int ret, long pilot, uint32_t
   });
 }
 
+void OpenEVSEClass::getSerial(std::function<void(int ret, const char *serial)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // GI - get MCU ID - requires MCU_ID_LEN to be defined
+  //  response: $OK mcuid
+  //  mcuid: AVR serial number
+  //         mcuid is 6 ASCII characters followed by 4 hex digits
+  //         first hex digit = FF for 328P
+  //   WARNING: mcuid is guaranteed to be unique only for the 328PB. Uniqueness is
+  //         unknown in 328P. The first 6 characters are ASCII, and the rest are
+  //         hexadecimal.
+
+  _sender->sendCmd("$GI", [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 2)
+      {
+        const char *val;
+        val = _sender->getToken(1);
+        while(' ' == *val) {
+          val++;
+        }
+
+        callback(ret, val);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, NULL);
+      }
+    } else {
+      callback(ret, NULL);
+    }
+  });
+}
+
 void OpenEVSEClass::setServiceLevel(uint8_t level, std::function<void(int ret)> callback)
 {
   if (!_sender) {
