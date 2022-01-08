@@ -10,6 +10,8 @@
 #include <time.h>                       // time() ctime()
 #include <sys/time.h>                   // struct timeval
 
+#define OPENEVSE_LCD_SPACE_MAGIC_CHAR 0xFE
+
 OpenEVSEClass::OpenEVSEClass() :
   _sender(NULL),
   _connected(false),
@@ -818,6 +820,15 @@ void OpenEVSEClass::lcdDisplayText(int x, int y, const char *text, std::function
 
   char command[64];
   snprintf(command, sizeof(command), "$FP %d %d %s", x, y, text);
+
+  // replace spaces in the message with the magic char
+  int expected_spaces = 3;
+  for(int i = 0; i < strlen(command); i++)
+  {
+    if(command[i] == ' ' && --expected_spaces < 0) {
+      command[i] = OPENEVSE_LCD_SPACE_MAGIC_CHAR;
+    }
+  }
 
   _sender->sendCmd(command, [this, callback](int ret) {
     callback(ret);
