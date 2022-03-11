@@ -498,8 +498,13 @@ void OpenEVSEClass::setCurrentCapacity(long amps, bool save, std::function<void(
   //      the value cannot be changed/erased via RAPI commands. Subsequent calls
   //      to $SC M will return $NK
 
+  // The above is not strictly true, as far as the code goes the valeus are saved to EEPROM if no third
+  // parameter is specified and not if any third parameter is specified.
+  //
+  // https://github.com/lincomatic/open_evse/blob/development/firmware/open_evse/rapi_proc.cpp#L456-L459
+
   char command[64];
-  snprintf(command, sizeof(command), "$SC %ld %s", amps, save ? "M" : "V");
+  snprintf(command, sizeof(command), "$SC %ld%s", amps, save ? "" : " V");
 
   _sender->sendCmd(command, [this, callback](int ret)
   {
