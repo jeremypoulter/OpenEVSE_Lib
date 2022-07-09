@@ -191,7 +191,7 @@ void OpenEVSEClass::setTime(tm &time, std::function<void(int ret)> callback)
   char command[64];
   snprintf(command, sizeof(command), "$S1 %d %d %d %d %d %d",
     time.tm_year % 100,
-    time.tm_mon,
+    time.tm_mon + 1,
     time.tm_mday,
     time.tm_hour,
     time.tm_min,
