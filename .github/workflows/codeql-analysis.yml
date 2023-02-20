@@ -14,11 +14,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        example:
-          - get_charger_state
-        board:
-          - huzzah
-          - esp-wrover-kit
+        include:
+          - example: get_charger_state
+            board: huzzah
+            platform: espressif8266
+
+          - example: get_charger_state
+            board: esp-wrover-kit
+            platform: espressif32
 
     name: Analyse ${{ matrix.example }}-${{ matrix.board }}
     runs-on: ubuntu-latest
@@ -49,6 +52,11 @@ jobs:
 
     - name: Install Platform IO
       run: pip install -U platformio
+
+    # Force install of the platform, we need to tweak it
+    - name: Install platform
+      run:
+        platformio platform install ${{ matrix.platform }}
 
     - name: Enable CodeQL wrappers for Platform IO toolchains
       if: ${{ matrix.platform != 'native' }}
