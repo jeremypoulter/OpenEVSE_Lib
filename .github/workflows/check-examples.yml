@@ -1,0 +1,50 @@
+name: Platform IO
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          - get_charger_state
+        board:
+          - huzzah
+          - esp-wrover-kit
+
+    runs-on: ubuntu-latest
+    name: Build ${{ matrix.example }}-${{ matrix.board }}
+
+    steps:
+      - uses: ammaraskar/gcc-problem-matcher@master
+
+      - uses: actions/checkout@v3
+
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio/.cache
+          key: ${{ runner.os }}-pio
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install PlatformIO Core
+        run: pip install --upgrade platformio
+
+      - name: Install Checked out OpenEVSE_Lib
+        run:
+          pio lib -g install $GITHUB_WORKSPACE
+
+      - name: Build example 
+        run: |
+          cd examples/${{ matrix.example }}
+          pio run -e ${{ matrix.board }}
