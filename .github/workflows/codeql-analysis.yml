@@ -50,11 +50,6 @@ jobs:
     - name: Install Platform IO
       run: pip install -U platformio
 
-    # Force install of the platform, we need to tweak it
-    - name: Install platform
-      run:
-        platformio platform install ${{ matrix.platform }}
-
     - name: Enable CodeQL wrappers for Platform IO toolchains
       if: ${{ matrix.platform != 'native' }}
       run:
