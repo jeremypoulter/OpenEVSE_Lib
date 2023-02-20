@@ -737,6 +737,19 @@ void OpenEVSEClass::restart(std::function<void(int ret)> callback)
   });
 }
 
+void OpenEVSEClass::clearBootLock(std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+  // SB - clear BOOTLOCK
+  // $SB
+
+  _sender->sendCmd("$SB", [this, callback](int ret) {
+    callback(ret);
+  });
+}
+
 void OpenEVSEClass::feature(uint8_t feature, bool enable, std::function<void(int ret)> callback)
 {
   if (!_sender) {
