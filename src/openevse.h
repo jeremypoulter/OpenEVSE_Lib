@@ -154,6 +154,7 @@ class OpenEVSEClass
     void sleep(std::function<void(int ret)> callback);
     void disable(std::function<void(int ret)> callback);
     void restart(std::function<void(int ret)> callback);
+    void clearBootLock(std::function<void(int ret)> callback);
 
     void lcdEnable(bool enable, std::function<void(int ret)> callback);
     void lcdSetColour(int colour, std::function<void(int ret)> callback);
