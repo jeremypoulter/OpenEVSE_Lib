@@ -152,7 +152,7 @@ void OpenEVSEClass::getTime(std::function<void(int ret, time_t time)> callback)
           memset(&tm, 0, sizeof(tm));
 
           tm.tm_year = 100+year;
-          tm.tm_mon = month;
+          tm.tm_mon = month - 1;
           tm.tm_mday = day;
           tm.tm_hour = hour;
           tm.tm_min = minute;
@@ -177,7 +177,7 @@ void OpenEVSEClass::setTime(time_t time, std::function<void(int ret)> callback)
   // S1 yr mo day hr min sec - set clock (RTC) yr=2-digit year
 
   struct tm tm;
-  gmtime_r(&time, &tm);
+  localtime_r(&time, &tm);
 
   setTime(tm, callback);
 }
