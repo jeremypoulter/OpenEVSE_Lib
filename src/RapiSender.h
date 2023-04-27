@@ -60,7 +60,7 @@ private:
   uint8_t _sequenceId;
   uint8_t _flags;
   int _tokenCnt;
-  char *_tokens[RAPI_MAX_TOKENS];
+  const char *_tokens[RAPI_MAX_TOKENS];
   RapiEventHandler _onRapiEvent;
 
   Queue<CommandItem> _commandQueue;
