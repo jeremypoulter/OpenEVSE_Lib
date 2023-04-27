@@ -2,6 +2,7 @@
 #define __OPENEVSE_H
 
 #include <functional>
+#include <time.h>
 
 #include "RapiSender.h"
 

@@ -10,6 +10,8 @@
 #include <time.h>                       // time() ctime()
 #include <sys/time.h>                   // struct timeval
 
+#include <cstdio>                       // snprintf
+
 #define OPENEVSE_LCD_SPACE_MAGIC_CHAR 0xFE
 
 OpenEVSEClass::OpenEVSEClass() :
