@@ -56,6 +56,9 @@
 #define OPENEVSE_VFLAG_SESSION_ENDED        0x0200 // used for charging session time calc
 #define OPENEVSE_VFLAG_EV_CONNECTED_PREV    0x0400 // prev EV connected flag
 #define OPENEVSE_VFLAG_UI_IN_MENU           0x0800 // onboard UI currently in a menu
+#define OPENEVSE_VFLAG_BOOT_LOCK            0x4000 // locked at boot
+#define OPENEVSE_VFLAG_MENNEKES_MANUAL      0x8000 // Mennekes lock manual mode
+
 #if defined(AUTH_LOCK) && (AUTH_LOCK != 0)
 #define OPENEVSE_VFLAG_DEFAULT              ECVF_AUTH_LOCKED|ECVF_SESSION_ENDED
 #else
