@@ -481,6 +481,17 @@ void OpenEVSEClass::getCurrentCapacity(std::function<void(int ret, long min_curr
 
 void OpenEVSEClass::setCurrentCapacity(long amps, bool save, std::function<void(int ret, long pilot)> callback)
 {
+  setCurrentCapacity(amps, save ? "": " V", callback);
+}
+
+
+void OpenEVSEClass::setCurrentCapacityFactoryLimit(long amps, std::function<void(int ret, long pilot)> callback)
+{
+  setCurrentCapacity(amps, " M", callback);
+}
+
+void OpenEVSEClass::setCurrentCapacity(long amps, const char *mode, std::function<void(int ret, long pilot)> callback)
+{
   if (!_sender) {
     return;
   }
@@ -506,7 +517,7 @@ void OpenEVSEClass::setCurrentCapacity(long amps, bool save, std::function<void(
   // https://github.com/lincomatic/open_evse/blob/development/firmware/open_evse/rapi_proc.cpp#L456-L459
 
   char command[64];
-  snprintf(command, sizeof(command), "$SC %ld%s", amps, save ? "" : " V");
+  snprintf(command, sizeof(command), "$SC %ld%s", amps, mode);
 
   _sender->sendCmd(command, [this, callback](int ret)
   {
