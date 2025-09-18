@@ -141,6 +141,9 @@ class OpenEVSEClass
 
     void getCurrentCapacity(std::function<void(int ret, long min_current, long pilot, long max_configured_current, long max_hardware_current)> callback);
     void setCurrentCapacity(long amps, bool save, std::function<void(int ret, long pilot)> callback);
+    void setCurrentCapacity(long amps, const char *mode, std::function<void(int ret, long pilot)> callback);
+    
+    void setCurrentCapacityFactoryLimit(long amps, std::function<void(int ret, long pilot)> callback);
 
     void getAmmeterSettings(std::function<void(int ret, long scale, long offset)> callback);
     void setAmmeterSettings(long scale, long offset, std::function<void(int ret)> callback);
