@@ -130,7 +130,7 @@ class OpenEVSEClass
     void setTime(time_t time, std::function<void(int ret)> callback);
     void setTime(tm &time, std::function<void(int ret)> callback);
 
-    void getChargeCurrentAndVoltage(std::function<void(int ret, double amps, double volts)> callback);
+    void getChargeCurrentAndVoltage(std::function<void(int ret, double amps, double volts, int relay1, int relay2)> callback);
     void getTemperature(std::function<void(int ret, double temp1, bool temp1_valid, double temp2, bool temp2_valid, double temp3, bool temp3_valid)> callback);
     void getEnergy(std::function<void(int ret, double session, double total)> callback);
     void getFaultCounters(std::function<void(int ret, long gfci_count, long nognd_count, long stuck_count)> callback);
