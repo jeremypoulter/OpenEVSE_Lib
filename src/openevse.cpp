@@ -216,7 +216,7 @@ void OpenEVSEClass::setTime(tm &time, std::function<void(int ret)> callback)
 
 }
 
-void OpenEVSEClass::getChargeCurrentAndVoltage(std::function<void(int ret, double amps, double volts)> callback)
+void OpenEVSEClass::getChargeCurrentAndVoltage(std::function<void(int ret, double amps, double volts, int relay1, int relay2)> callback)
 {
   if (!_sender) {
     return;
@@ -235,13 +235,15 @@ void OpenEVSEClass::getChargeCurrentAndVoltage(std::function<void(int ret, doubl
       {
         long milliAmps = strtol(_sender->getToken(1), NULL, 10);
         long milliVolts = strtol(_sender->getToken(2), NULL, 10);
+        long rel1 = strtol(_sender->getToken(3), NULL, 10);
+        long rel2 = strtol(_sender->getToken(4), NULL, 10);
 
-        callback(ret, (double)milliAmps / 1000.0, (double)milliVolts / 1000.0);
+        callback(ret, (double)milliAmps / 1000.0, (double)milliVolts / 1000.0, (int) rel1, (int) rel2);
       } else {
-        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0, 0);
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0, 0, 0, 0);
       }
     } else {
-      callback(ret, 0, 0);
+      callback(ret, 0, 0, 0, 0);
     }
   });
 }
