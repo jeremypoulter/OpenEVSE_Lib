@@ -144,6 +144,7 @@ class OpenEVSEClass
     void getRelayStatus(std::function<void(int ret, bool dc1, bool dc2, bool ac)> callback);
     void setRelayEnable(int relay, bool enable, std::function<void(int ret)> callback);
     void resetFaultCounters(std::function<void(int ret)> callback);
+    void setPanicTemperature(uint32_t tempC, std::function<void(int ret)> callback);
 
     void setServiceLevel(uint8_t level, std::function<void(int ret)> callback);
 

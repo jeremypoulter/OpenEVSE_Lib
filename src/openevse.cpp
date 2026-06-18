@@ -511,6 +511,24 @@ void OpenEVSEClass::resetFaultCounters(std::function<void(int ret)> callback)
   });
 }
 
+void OpenEVSEClass::setPanicTemperature(uint32_t tempC, std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // FO threshold - set over-temperature panic threshold (requires TEMPERATURE_MONITORING)
+  //  threshold is in 10ths of a degree Celcius (e.g. 720 = 72.0 C)
+  //  charging is shut down if any sensor exceeds this threshold
+
+  char command[32];
+  snprintf(command, sizeof(command), "$FO %u", tempC * 10);
+
+  _sender->sendCmd(command, [this, callback](int ret) {
+    callback(ret);
+  });
+}
+
 void OpenEVSEClass::setServiceLevel(uint8_t level, std::function<void(int ret)> callback)
 {
   if (!_sender) {

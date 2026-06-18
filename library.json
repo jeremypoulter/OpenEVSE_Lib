@@ -15,7 +15,7 @@
       "maintainer": true
     }
   ],
-  "version": "0.0.16",
+  "version": "0.0.17",
   "frameworks": "arduino",
   "platforms": "*",
   "dependencies": [
