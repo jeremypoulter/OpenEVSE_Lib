@@ -90,6 +90,8 @@
 #define OPENEVSE_FEATURE_RELAY_CKECK        'R' // stuck Relay check
 #define OPENEVSE_FEATURE_TEMPURATURE_CHECK  'T' // temperature monitoring
 #define OPENEVSE_FEATURE_VENT_CHECK         'V' // Vent required check
+#define OPENEVSE_FEATURE_PP_AUTO_AMPACITY   'P' // PP-pin cable current capacity (linco-work)
+#define OPENEVSE_FEATURE_ZERO_CROSS_SWITCH  'Z' // relay zero-cross switching (linco-work)
 
 #define OPENEVSE_SERVICE_LEVEL_AUTO         'A'
 #define OPENEVSE_SERVICE_LEVEL_L1           '1'
@@ -136,6 +138,12 @@ class OpenEVSEClass
     void getFaultCounters(std::function<void(int ret, long gfci_count, long nognd_count, long stuck_count)> callback);
     void getSettings(std::function<void(int ret, long pilot, uint32_t flags)> callback);
     void getSerial(std::function<void(int ret, const char *serial)> callback);
+
+    // linco-work D9 firmware extensions
+    void getFrequency(std::function<void(int ret, uint32_t frequency)> callback);
+    void getRelayStatus(std::function<void(int ret, bool dc1, bool dc2, bool ac)> callback);
+    void setRelayEnable(int relay, bool enable, std::function<void(int ret)> callback);
+    void resetFaultCounters(std::function<void(int ret)> callback);
 
     void setServiceLevel(uint8_t level, std::function<void(int ret)> callback);
 

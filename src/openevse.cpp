@@ -418,6 +418,99 @@ void OpenEVSEClass::getSerial(std::function<void(int ret, const char *serial)> c
   });
 }
 
+void OpenEVSEClass::getFrequency(std::function<void(int ret, uint32_t frequency)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // GZ - get AC line frequency (linco-work D9 firmware)
+  //  response: $OK frequency
+  //  frequency - AC line frequency in 100ths of a Hz (e.g. 5000 = 50.00 Hz)
+  //  returns 0 if not measured
+
+  _sender->sendCmd("$GZ", [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 2)
+      {
+        uint32_t frequency = strtoul(_sender->getToken(1), NULL, 10);
+
+        callback(ret, frequency);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, 0);
+      }
+    } else {
+      callback(ret, 0);
+    }
+  });
+}
+
+void OpenEVSEClass::getRelayStatus(std::function<void(int ret, bool dc1, bool dc2, bool ac)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // GR - get relay status (linco-work D9 firmware)
+  //  response: $OK dc1 dc2 ac
+  //  dc1 - DC relay 1 enabled (0|1)
+  //  dc2 - DC relay 2 enabled (0|1)
+  //  ac  - AC relay enabled (0|1)
+
+  _sender->sendCmd("$GR", [this, callback](int ret)
+  {
+    if (RAPI_RESPONSE_OK == ret)
+    {
+      if(_sender->getTokenCnt() >= 4)
+      {
+        bool dc1 = strtol(_sender->getToken(1), NULL, 10) != 0;
+        bool dc2 = strtol(_sender->getToken(2), NULL, 10) != 0;
+        bool ac  = strtol(_sender->getToken(3), NULL, 10) != 0;
+
+        callback(ret, dc1, dc2, ac);
+      } else {
+        callback(RAPI_RESPONSE_INVALID_RESPONSE, false, false, false);
+      }
+    } else {
+      callback(ret, false, false, false);
+    }
+  });
+}
+
+void OpenEVSEClass::setRelayEnable(int relay, bool enable, std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // SR relay 0|1 - enable/disable an individual relay (linco-work D9 firmware)
+  //  relay: 1 = DC relay 1, 2 = DC relay 2, 3 = AC relay
+  //  0|1 0=disable 1=enable
+
+  char command[16];
+  snprintf(command, sizeof(command), "$SR %d %d", relay, enable ? 1 : 0);
+
+  _sender->sendCmd(command, [this, callback](int ret) {
+    callback(ret);
+  });
+}
+
+void OpenEVSEClass::resetFaultCounters(std::function<void(int ret)> callback)
+{
+  if (!_sender) {
+    return;
+  }
+
+  // FC - reset fault counters (linco-work D9 firmware)
+  //  clears the GFI / no-ground / stuck-relay trip counters
+
+  _sender->sendCmd("$FC", [this, callback](int ret) {
+    callback(ret);
+  });
+}
+
 void OpenEVSEClass::setServiceLevel(uint8_t level, std::function<void(int ret)> callback)
 {
   if (!_sender) {
