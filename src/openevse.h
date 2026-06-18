@@ -20,6 +20,11 @@
 #define OPENEVSE_STATE_GFI_SELF_TEST_FAILED   9
 #define OPENEVSE_STATE_OVER_TEMPERATURE      10
 #define OPENEVSE_STATE_OVER_CURRENT          11
+// 0x0C (PILOT_ERROR) and 0x0D (TEMP_SENSOR_FAULT) are reserved in the controller
+#define OPENEVSE_STATE_RELAY_CLOSURE_FAULT   14 // 0x0E relay closure fault (linco-work)
+#define OPENEVSE_STATE_PP_SHORTED            15 // 0x0F proximity pilot pin shorted (linco-work)
+#define OPENEVSE_STATE_PP_MISSING            16 // 0x10 proximity pilot resistor missing (linco-work)
+#define OPENEVSE_STATE_EEPROM_FAILURE        17 // 0x11 EEPROM failure (linco-work, SAMD only)
 #define OPENEVSE_STATE_SLEEPING             254
 #define OPENEVSE_STATE_DISABLED             255
 
@@ -35,13 +40,28 @@
 #define OPENEVSE_ECF_GND_CHK_DISABLED   0x0008 // no chk for ground fault
 #define OPENEVSE_ECF_STUCK_RELAY_CHK_DISABLED 0x0010 // no chk for stuck relay
 #define OPENEVSE_ECF_AUTO_SVC_LEVEL_DISABLED  0x0020 // auto detect svc level - requires ADVPWR
-// Ability set the EVSE for manual button press to start charging - GoldServe
-#define OPENEVSE_ECF_AUTO_START_DISABLED 0x0040  // no auto start charging
+// 0x0040 is overloaded: legacy mainline OpenEVSE uses it for auto-start-disabled
+// (GoldServe manual button press to start charging); linco-work (D9, RAPI
+// protocol >= 6.0.0) repurposes the same bit as PP auto-ampacity. Use the alias
+// that matches your controller firmware - they are intentionally the same value.
+#define OPENEVSE_ECF_AUTO_START_DISABLED 0x0040 // no auto start charging (pre-D9 mainline)
+#define OPENEVSE_ECF_PP_AUTO_AMPACITY   0x0040 // PP auto-ampacity enabled (linco-work D9)
 #define OPENEVSE_ECF_SERIAL_DBG         0x0080 // enable debugging messages via serial
 #define OPENEVSE_ECF_MONO_LCD           0x0100 // monochrome LCD backlight
 #define OPENEVSE_ECF_GFI_TEST_DISABLED  0x0200 // no GFI self test
 #define OPENEVSE_ECF_TEMP_CHK_DISABLED  0x0400 // no Temperature Monitoring
+#define OPENEVSE_ECF_OVERCURRENT_DISABLED 0x0400 // no overcurrent check (shares bit with temp check)
+#define OPENEVSE_ECF_RELAY_ZC_DISABLED  0x0800 // no zero-crossing relay switching (linco-work D9)
+#define OPENEVSE_ECF_CGMI               0x1000 // continuous ground-monitor interrupt (linco-work)
+#define OPENEVSE_ECF_BOOT_LOCK_DISABLED 0x2000 // boot lock disabled (linco-work D9)
 #define OPENEVSE_ECF_BUTTON_DISABLED    0x8000 // front panel button disabled
+
+// Relay enable/disable flags - saved to EEPROM at EOFS_RELAY_FLAGS (linco-work D9).
+// Read via $GR, set via $SR. A set bit means that relay is DISABLED.
+#define OPENEVSE_RELAYF_DC1_DISABLED    0x01 // DC relay 1 disabled
+#define OPENEVSE_RELAYF_DC2_DISABLED    0x02 // DC relay 2 disabled
+#define OPENEVSE_RELAYF_AC_DISABLED     0x04 // AC relay disabled
+#define OPENEVSE_RELAYF_DEFAULT         0x00 // all relays enabled
 
 // J1772EVSEController volatile m_wVFlags bits - not saved to EEPROM
 #define OPENEVSE_VFLAG_AUTOSVCLVL_SKIPPED   0x0001 // auto svc level test skipped during post
