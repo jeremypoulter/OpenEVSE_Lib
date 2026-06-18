@@ -429,6 +429,11 @@ void OpenEVSEClass::getFrequency(std::function<void(int ret, uint32_t frequency)
   //  frequency - AC line frequency in 100ths of a Hz (e.g. 5000 = 50.00 Hz)
   //  returns 0 if not measured
 
+  if (!isD9Supported()) {
+    callback(RAPI_RESPONSE_FEATURE_NOT_SUPPORTED, 0);
+    return;
+  }
+
   _sender->sendCmd("$GZ", [this, callback](int ret)
   {
     if (RAPI_RESPONSE_OK == ret)
@@ -458,6 +463,11 @@ void OpenEVSEClass::getRelayStatus(std::function<void(int ret, bool dc1, bool dc
   //  dc1 - DC relay 1 enabled (0|1)
   //  dc2 - DC relay 2 enabled (0|1)
   //  ac  - AC relay enabled (0|1)
+
+  if (!isD9Supported()) {
+    callback(RAPI_RESPONSE_FEATURE_NOT_SUPPORTED, false, false, false);
+    return;
+  }
 
   _sender->sendCmd("$GR", [this, callback](int ret)
   {
@@ -489,6 +499,11 @@ void OpenEVSEClass::setRelayEnable(int relay, bool enable, std::function<void(in
   //  relay: 1 = DC relay 1, 2 = DC relay 2, 3 = AC relay
   //  0|1 0=disable 1=enable
 
+  if (!isD9Supported()) {
+    callback(RAPI_RESPONSE_FEATURE_NOT_SUPPORTED);
+    return;
+  }
+
   char command[16];
   snprintf(command, sizeof(command), "$SR %d %d", relay, enable ? 1 : 0);
 
@@ -506,6 +521,11 @@ void OpenEVSEClass::resetFaultCounters(std::function<void(int ret)> callback)
   // FC - reset fault counters (linco-work D9 firmware)
   //  clears the GFI / no-ground / stuck-relay trip counters
 
+  if (!isD9Supported()) {
+    callback(RAPI_RESPONSE_FEATURE_NOT_SUPPORTED);
+    return;
+  }
+
   _sender->sendCmd("$FC", [this, callback](int ret) {
     callback(ret);
   });
@@ -520,6 +540,11 @@ void OpenEVSEClass::setPanicTemperature(uint32_t tempC, std::function<void(int r
   // FO threshold - set over-temperature panic threshold (requires TEMPERATURE_MONITORING)
   //  threshold is in 10ths of a degree Celcius (e.g. 720 = 72.0 C)
   //  charging is shut down if any sensor exceeds this threshold
+
+  if (!isD9Supported()) {
+    callback(RAPI_RESPONSE_FEATURE_NOT_SUPPORTED);
+    return;
+  }
 
   char command[32];
   snprintf(command, sizeof(command), "$FO %u", tempC * 10);

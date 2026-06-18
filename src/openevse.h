@@ -73,6 +73,11 @@
 
 #define OPENEVSE_OCPP_SUPPORT_PROTOCOL_VERSION  OPENEVSE_ENCODE_VERSION(5,0,0)
 
+// RAPI protocol version that introduces the linco-work D9 command set
+// ($GZ, $GR, $SR, $FC, $FO and the $FF P/Z feature flags). Controllers
+// reporting an older protocol NAK these commands, so they are gated.
+#define OPENEVSE_D9_SUPPORT_PROTOCOL_VERSION    OPENEVSE_ENCODE_VERSION(6,0,0)
+
 #define OPENEVSE_LCD_OFF      0
 #define OPENEVSE_LCD_RED      1
 #define OPENEVSE_LCD_GREEN    2
@@ -186,6 +191,16 @@ class OpenEVSEClass
 
     bool isConnected() {
       return _connected;
+    }
+
+    // RAPI protocol version reported by the controller, encoded with
+    // OPENEVSE_ENCODE_VERSION (e.g. "6.0.0" -> 6000). Valid once connected.
+    uint32_t getProtocolVersion() {
+      return _protocol;
+    }
+    // True if the controller supports the linco-work D9 command set.
+    bool isD9Supported() {
+      return _protocol >= OPENEVSE_D9_SUPPORT_PROTOCOL_VERSION;
     }
 
     void onBoot(OpenEVSEBootCallback callback) {
